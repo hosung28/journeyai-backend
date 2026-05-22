@@ -1,0 +1,81 @@
+// override: true makes .env authoritative even when a variable (e.g. an empty
+// ANTHROPIC_API_KEY) is already present in the system/shell environment —
+// otherwise dotenv silently keeps the pre-existing (empty) value.
+require("dotenv").config({ override: true });
+
+const express = require("express");
+const cors = require("cors");
+const { getTransportOptions } = require("./lib/transport");
+
+const app = express();
+const PORT = Number(process.env.PORT) || 4000;
+
+app.use(cors());
+app.use(express.json({ limit: "256kb" }));
+
+// Lightweight request log.
+app.use((req, _res, next) => {
+  console.log(`${new Date().toISOString()}  ${req.method} ${req.path}`);
+  next();
+});
+
+app.get("/", (_req, res) => {
+  res.json({
+    service: "journeyai-backend",
+    endpoints: ["GET /health", "POST /api/transport"],
+  });
+});
+
+app.get("/health", (_req, res) => {
+  res.json({
+    ok: true,
+    claude: Boolean(process.env.ANTHROPIC_API_KEY),
+    amadeus: Boolean(
+      process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET,
+    ),
+  });
+});
+
+/**
+ * POST /api/transport
+ * body: { from: City, to: City, departureDate?: "YYYY-MM-DD", adults?: number }
+ * -> { options: TransportOption[] }
+ */
+app.post("/api/transport", async (req, res) => {
+  const { from, to, departureDate, adults } = req.body || {};
+  if (!from || !to || !from.name || !to.name) {
+    return res
+      .status(400)
+      .json({ error: "Both 'from' and 'to' cities are required." });
+  }
+  try {
+    const options = await getTransportOptions({
+      from,
+      to,
+      departureDate: typeof departureDate === "string" ? departureDate : null,
+      adults: Number(adults) > 0 ? Number(adults) : 1,
+    });
+    res.json({ options });
+  } catch (err) {
+    console.error("[/api/transport] failed:", err);
+    res.status(502).json({
+      error: "Could not load transport options.",
+      detail: String(err && err.message ? err.message : err),
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`\nJourneyAI backend listening on http://0.0.0.0:${PORT}`);
+  console.log(
+    `  Claude key:  ${process.env.ANTHROPIC_API_KEY ? "set" : "MISSING — transport will fail"}`,
+  );
+  console.log(
+    `  Amadeus key: ${
+      process.env.AMADEUS_CLIENT_ID
+        ? "set — flights use real fares"
+        : "missing — flights use Claude estimates"
+    }`,
+  );
+  console.log(`  Health check: http://localhost:${PORT}/health\n`);
+});

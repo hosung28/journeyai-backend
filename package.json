@@ -1,0 +1,20 @@
+{
+  "name": "journeyai-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend proxy for JourneyAI — Claude (transport-mode discovery) + Amadeus (real flight fares).",
+  "type": "commonjs",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
