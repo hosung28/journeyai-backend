@@ -6,6 +6,7 @@ require("dotenv").config({ override: true });
 const express = require("express");
 const cors = require("cors");
 const { getTransportOptions } = require("./lib/transport");
+const { optimizeStay } = require("./lib/optimize");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -60,6 +61,28 @@ app.post("/api/transport", async (req, res) => {
     console.error("[/api/transport] failed:", err);
     res.status(502).json({
       error: "Could not load transport options.",
+      detail: String(err && err.message ? err.message : err),
+    });
+  }
+});
+
+/**
+ * POST /api/optimize
+ * body: { city, nights, hotel, places[], activities[], restaurants[] }
+ * -> { days: OptimizedDay[] }
+ */
+app.post("/api/optimize", async (req, res) => {
+  const stay = req.body || {};
+  if (!stay.city) {
+    return res.status(400).json({ error: "stay 'city' is required." });
+  }
+  try {
+    const days = await optimizeStay(stay);
+    res.json({ days });
+  } catch (err) {
+    console.error("[/api/optimize] failed:", err);
+    res.status(502).json({
+      error: "Could not optimize the itinerary.",
       detail: String(err && err.message ? err.message : err),
     });
   }
