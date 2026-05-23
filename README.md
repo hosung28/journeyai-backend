@@ -4,8 +4,9 @@ A small proxy server for the JourneyAI app. It keeps API keys off the device and
 returns real transport data:
 
 - **Claude** — discovers every realistic transport mode for a city pair
-  (flight, train, ferry, bus, drive, walk).
-- **Amadeus** — replaces flight legs with real, live fares (free sandbox).
+  (flight, train, ferry, bus, drive, walk) and AI-optimizes day-by-day plans.
+- **FlightAPI.io** — replaces estimated flight legs with real flight offers
+  (departure/arrival times, flight numbers, airlines, fares).
 
 ## Setup
 
@@ -21,16 +22,23 @@ npm start
 | Variable | Required? | Where to get it |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Yes | https://console.anthropic.com -> API Keys |
-| `AMADEUS_CLIENT_ID` / `AMADEUS_CLIENT_SECRET` | Optional | https://developers.amadeus.com -> create a Self-Service app (free, instant) |
+| `FLIGHTAPI_KEY` | Optional | https://www.flightapi.io -> sign up (20 free calls, then $49/mo) |
 
-With only the Anthropic key, the transport screen works fully — flight prices are
-Claude estimates. Add the Amadeus keys and flight legs switch to real live fares.
+With only the Anthropic key, the Transport screen still works fully — flight
+times and prices are Claude estimates. Add `FLIGHTAPI_KEY` and flight legs
+switch to real, live data: real airline names, departure/arrival times, flight
+numbers, and fares.
 
 ## Endpoints
 
 - `GET /health` — reports which keys are configured.
 - `POST /api/transport` — body `{ from, to, departureDate, adults }`,
-  returns `{ options: TransportOption[] }`.
+  returns `{ options: TransportOption[] }`. When FlightAPI is configured,
+  the single Claude "Flight" entry is replaced with multiple real flight
+  offers (up to 5), each carrying schedule fields the app uses to plan
+  arrival-day and departure-day activities.
+- `POST /api/optimize` — body `{ city, nights, hotel, places, activities,
+  restaurants }`, returns `{ days: OptimizedDay[] }`.
 
 ## Connecting the app
 
@@ -40,11 +48,17 @@ and keep the phone on the same Wi-Fi. Restart `expo start` after changing it.
 
 ## Notes
 
-- The Amadeus **test** environment is a realistic but limited dataset. If it has
-  no data for a given route/date, that flight gracefully falls back to Claude's
-  estimate — the screen never breaks.
-- Train / ferry / bus prices are always Claude estimates: no free real-data API
-  covers them (see CLAUDE.md).
+- **Why we switched off Amadeus:** Amadeus announced the shutdown of its
+  Self-Service developer portal on **2026-07-17**. Investing in it now is a
+  dead end. FlightAPI.io is self-serve, has no sunset date, and covers 700+
+  airlines.
+- **Free tier is small.** FlightAPI's free tier is 20 calls total (not per
+  month). Plenty to verify the integration; budget for $49/mo if you keep
+  using it in beta. Each transport lookup uses 1 oneway-search call = 2 credits.
+- **Soft failure.** If FlightAPI is unreachable or has no data for a route, the
+  backend silently falls back to Claude estimates — the screen never breaks.
+- **Train / ferry / bus prices are always Claude estimates.** No self-serve
+  real-data API covers them (see CLAUDE.md).
 
 ## Deploying to Render
 
@@ -66,11 +80,11 @@ has a free tier and needs no credit card.
 
 3. **Environment tab → add your keys:**
    - `ANTHROPIC_API_KEY` — required
-   - `AMADEUS_CLIENT_ID` / `AMADEUS_CLIENT_SECRET` — optional (real flight fares)
+   - `FLIGHTAPI_KEY` — optional (real flight schedules + fares)
    - Do **not** set `PORT` — Render provides it.
 
 4. **Deploy.** You get a URL like `https://journeyai-backend.onrender.com`.
-   Verify `https://<url>/health` → `{"ok":true,"claude":true,...}`.
+   Verify `https://<url>/health` → `{"ok":true,"claude":true,"flightapi":true}`.
 
 5. Put that URL in the app's `EXPO_PUBLIC_API_URL`, then build the standalone app.
 

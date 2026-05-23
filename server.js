@@ -31,9 +31,7 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     claude: Boolean(process.env.ANTHROPIC_API_KEY),
-    amadeus: Boolean(
-      process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET,
-    ),
+    flightapi: Boolean(process.env.FLIGHTAPI_KEY),
   });
 });
 
@@ -94,9 +92,9 @@ app.listen(PORT, () => {
     `  Claude key:  ${process.env.ANTHROPIC_API_KEY ? "set" : "MISSING — transport will fail"}`,
   );
   console.log(
-    `  Amadeus key: ${
-      process.env.AMADEUS_CLIENT_ID
-        ? "set — flights use real fares"
+    `  FlightAPI key: ${
+      process.env.FLIGHTAPI_KEY
+        ? "set — flights use live schedules + fares"
         : "missing — flights use Claude estimates"
     }`,
   );

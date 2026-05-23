@@ -13,8 +13,6 @@ services:
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: AMADEUS_CLIENT_ID
-        sync: false
-      - key: AMADEUS_CLIENT_SECRET
+      - key: FLIGHTAPI_KEY
         sync: false
       # PORT is provided by Render automatically — do not set it.
