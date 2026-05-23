@@ -13,6 +13,6 @@ services:
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: FLIGHTAPI_KEY
+      - key: AEROAPI_KEY
         sync: false
       # PORT is provided by Render automatically — do not set it.

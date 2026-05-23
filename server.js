@@ -31,7 +31,7 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     claude: Boolean(process.env.ANTHROPIC_API_KEY),
-    flightapi: Boolean(process.env.FLIGHTAPI_KEY),
+    aeroapi: Boolean(process.env.AEROAPI_KEY),
   });
 });
 
@@ -92,9 +92,9 @@ app.listen(PORT, () => {
     `  Claude key:  ${process.env.ANTHROPIC_API_KEY ? "set" : "MISSING — transport will fail"}`,
   );
   console.log(
-    `  FlightAPI key: ${
-      process.env.FLIGHTAPI_KEY
-        ? "set — flights use live schedules + fares"
+    `  AeroAPI key: ${
+      process.env.AEROAPI_KEY
+        ? "set — flights use real airline schedules (FlightAware)"
         : "missing — flights use Claude estimates"
     }`,
   );
