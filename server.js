@@ -6,8 +6,8 @@ require("dotenv").config({ override: true });
 const express = require("express");
 const cors = require("cors");
 const { getTransportOptions } = require("./lib/transport");
-const { optimizeStay } = require("./lib/optimize");
-const { recommendForStay } = require("./lib/recommendations");
+const { optimizeDestination } = require("./lib/optimize");
+const { recommendForDestination } = require("./lib/recommendations");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -87,7 +87,7 @@ app.post("/api/recommendations", async (req, res) => {
       .json({ error: "'tripPreferences' (object) is required." });
   }
   try {
-    const payload = await recommendForStay({
+    const payload = await recommendForDestination({
       city,
       nights: Number(nights) > 0 ? Number(nights) : 1,
       travelers: Number(travelers) > 0 ? Number(travelers) : 1,
@@ -110,12 +110,12 @@ app.post("/api/recommendations", async (req, res) => {
  * -> { days: OptimizedDay[] }
  */
 app.post("/api/optimize", async (req, res) => {
-  const stay = req.body || {};
-  if (!stay.city) {
-    return res.status(400).json({ error: "stay 'city' is required." });
+  const destination = req.body || {};
+  if (!destination.city) {
+    return res.status(400).json({ error: "destination 'city' is required." });
   }
   try {
-    const days = await optimizeStay(stay);
+    const days = await optimizeDestination(destination);
     res.json({ days });
   } catch (err) {
     console.error("[/api/optimize] failed:", err);
