@@ -7,6 +7,7 @@ const express = require("express");
 const cors = require("cors");
 const { getTransportOptions } = require("./lib/transport");
 const { optimizeStay } = require("./lib/optimize");
+const { recommendForStay } = require("./lib/recommendations");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -23,7 +24,12 @@ app.use((req, _res, next) => {
 app.get("/", (_req, res) => {
   res.json({
     service: "journeyai-backend",
-    endpoints: ["GET /health", "POST /api/transport"],
+    endpoints: [
+      "GET /health",
+      "POST /api/transport",
+      "POST /api/recommendations",
+      "POST /api/optimize",
+    ],
   });
 });
 
@@ -59,6 +65,40 @@ app.post("/api/transport", async (req, res) => {
     console.error("[/api/transport] failed:", err);
     res.status(502).json({
       error: "Could not load transport options.",
+      detail: String(err && err.message ? err.message : err),
+    });
+  }
+});
+
+/**
+ * POST /api/recommendations
+ * body: { city, nights, travelers, tripPreferences, alreadyPicked? }
+ * -> { places: Place[] }   (Phase 1 — activities/restaurants land in Phase 2)
+ */
+app.post("/api/recommendations", async (req, res) => {
+  const { city, nights, travelers, tripPreferences, alreadyPicked } =
+    req.body || {};
+  if (!city || typeof city !== "string") {
+    return res.status(400).json({ error: "'city' (string) is required." });
+  }
+  if (!tripPreferences || typeof tripPreferences !== "object") {
+    return res
+      .status(400)
+      .json({ error: "'tripPreferences' (object) is required." });
+  }
+  try {
+    const payload = await recommendForStay({
+      city,
+      nights: Number(nights) > 0 ? Number(nights) : 1,
+      travelers: Number(travelers) > 0 ? Number(travelers) : 1,
+      tripPreferences,
+      alreadyPicked: Array.isArray(alreadyPicked) ? alreadyPicked : [],
+    });
+    res.json(payload);
+  } catch (err) {
+    console.error("[/api/recommendations] failed:", err);
+    res.status(502).json({
+      error: "Could not generate recommendations.",
       detail: String(err && err.message ? err.message : err),
     });
   }
