@@ -184,7 +184,8 @@ app.post("/api/hotels", async (req, res) => {
 
 /**
  * POST /api/optimize
- * body: { city, nights, hotel, places[], activities[], restaurants[] }
+ * body: { city, nights, hotel, places[], activities[], restaurants[],
+ *         arrivalTime?, departureTime?, customEvents?: [{day,time,title,area,note}] }
  * -> { days: OptimizedDay[] }
  */
 app.post("/api/optimize", async (req, res) => {
@@ -193,7 +194,14 @@ app.post("/api/optimize", async (req, res) => {
     return res.status(400).json({ error: "destination 'city' is required." });
   }
   try {
-    const days = await optimizeDestination(destination);
+    // customEvents lives at the top level of the body but optimizeDestination
+    // takes it as a second arg so the destination object stays "what the
+    // user picked" (places/activities/restaurants) and customs are clearly
+    // an external anchor.
+    const customEvents = Array.isArray(destination.customEvents)
+      ? destination.customEvents
+      : [];
+    const days = await optimizeDestination(destination, customEvents);
     res.json({ days });
   } catch (err) {
     console.error("[/api/optimize] failed:", err);
