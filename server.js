@@ -9,6 +9,7 @@ const { getTransportOptions } = require("./lib/transport");
 const { optimizeDestination } = require("./lib/optimize");
 const { recommendForDestination } = require("./lib/recommendations");
 const { recommendHotels } = require("./lib/hotels");
+const { searchCities } = require("./lib/cities");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -31,6 +32,7 @@ app.get("/", (_req, res) => {
       "POST /api/recommendations",
       "POST /api/hotels",
       "POST /api/optimize",
+      "POST /api/city-search",
     ],
   });
 });
@@ -207,6 +209,33 @@ app.post("/api/optimize", async (req, res) => {
     console.error("[/api/optimize] failed:", err);
     res.status(502).json({
       error: "Could not optimize the itinerary.",
+      detail: String(err && err.message ? err.message : err),
+    });
+  }
+});
+
+/**
+ * POST /api/city-search
+ * body: { query: string }
+ * -> { cities: [{ name, country, code, flag, em, desc }] }
+ *
+ * The mobile city-picker calls this for worldwide AI-powered search.
+ * Built-in CITIES are shown instantly client-side; this endpoint adds
+ * the long-tail. Frontend assigns `id` from AI_CITY_ID_BASE so static
+ * and AI IDs never collide.
+ */
+app.post("/api/city-search", async (req, res) => {
+  const query = String(req.body?.query || "").trim();
+  if (query.length < 2) {
+    return res.json({ cities: [] });
+  }
+  try {
+    const cities = await searchCities(query);
+    res.json({ cities });
+  } catch (err) {
+    console.error("[/api/city-search] failed:", err);
+    res.status(502).json({
+      error: "City search failed.",
       detail: String(err && err.message ? err.message : err),
     });
   }
