@@ -72,12 +72,28 @@ app.post("/api/transport", async (req, res) => {
 
 /**
  * POST /api/recommendations
- * body: { city, nights, travelers, tripPreferences, alreadyPicked? }
- * -> { places: Place[] }   (Phase 1 — activities/restaurants land in Phase 2)
+ * body: {
+ *   city, nights, travelers, tripPreferences,
+ *   alreadyPickedPlaces?, alreadyPickedActivities?, alreadyPickedRestaurants?
+ * }
+ * -> { places: Place[], activities: Activity[], restaurants: Restaurant[] }
+ *
+ * Phase 2: single Claude call generates all three categories together so the
+ * model can balance recommendations across them (e.g. a dinner spot near a
+ * recommended place). `alreadyPicked` (no suffix) is accepted as legacy
+ * alias for `alreadyPickedPlaces`.
  */
 app.post("/api/recommendations", async (req, res) => {
-  const { city, nights, travelers, tripPreferences, alreadyPicked } =
-    req.body || {};
+  const {
+    city,
+    nights,
+    travelers,
+    tripPreferences,
+    alreadyPicked,
+    alreadyPickedPlaces,
+    alreadyPickedActivities,
+    alreadyPickedRestaurants,
+  } = req.body || {};
   if (!city || typeof city !== "string") {
     return res.status(400).json({ error: "'city' (string) is required." });
   }
@@ -93,6 +109,15 @@ app.post("/api/recommendations", async (req, res) => {
       travelers: Number(travelers) > 0 ? Number(travelers) : 1,
       tripPreferences,
       alreadyPicked: Array.isArray(alreadyPicked) ? alreadyPicked : [],
+      alreadyPickedPlaces: Array.isArray(alreadyPickedPlaces)
+        ? alreadyPickedPlaces
+        : [],
+      alreadyPickedActivities: Array.isArray(alreadyPickedActivities)
+        ? alreadyPickedActivities
+        : [],
+      alreadyPickedRestaurants: Array.isArray(alreadyPickedRestaurants)
+        ? alreadyPickedRestaurants
+        : [],
     });
     res.json(payload);
   } catch (err) {
