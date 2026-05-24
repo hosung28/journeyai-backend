@@ -8,6 +8,7 @@ const cors = require("cors");
 const { getTransportOptions } = require("./lib/transport");
 const { optimizeDestination } = require("./lib/optimize");
 const { recommendForDestination } = require("./lib/recommendations");
+const { recommendHotels } = require("./lib/hotels");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -28,6 +29,7 @@ app.get("/", (_req, res) => {
       "GET /health",
       "POST /api/transport",
       "POST /api/recommendations",
+      "POST /api/hotels",
       "POST /api/optimize",
     ],
   });
@@ -124,6 +126,57 @@ app.post("/api/recommendations", async (req, res) => {
     console.error("[/api/recommendations] failed:", err);
     res.status(502).json({
       error: "Could not generate recommendations.",
+      detail: String(err && err.message ? err.message : err),
+    });
+  }
+});
+
+/**
+ * POST /api/hotels
+ * body: {
+ *   city, nights, travelers, checkIn?, checkOut?,
+ *   hotelPreferences: { stars[], budget, vibes[], mustHaves[], locationPriority },
+ *   picks: { places[], activities[], restaurants[] }
+ * }
+ * -> { hotels: Hotel[] }
+ *
+ * AI-recommended hotels for a destination, ranked by the user's location
+ * priority (transit access / proximity / value) relative to the items they
+ * already picked in Explore.
+ */
+app.post("/api/hotels", async (req, res) => {
+  const {
+    city,
+    nights,
+    travelers,
+    checkIn,
+    checkOut,
+    hotelPreferences,
+    picks,
+  } = req.body || {};
+  if (!city || typeof city !== "string") {
+    return res.status(400).json({ error: "'city' (string) is required." });
+  }
+  if (!hotelPreferences || typeof hotelPreferences !== "object") {
+    return res
+      .status(400)
+      .json({ error: "'hotelPreferences' (object) is required." });
+  }
+  try {
+    const payload = await recommendHotels({
+      city,
+      nights: Number(nights) > 0 ? Number(nights) : 1,
+      travelers: Number(travelers) > 0 ? Number(travelers) : 1,
+      checkIn: typeof checkIn === "string" ? checkIn : null,
+      checkOut: typeof checkOut === "string" ? checkOut : null,
+      hotelPreferences,
+      picks: picks || {},
+    });
+    res.json(payload);
+  } catch (err) {
+    console.error("[/api/hotels] failed:", err);
+    res.status(502).json({
+      error: "Could not generate hotel recommendations.",
       detail: String(err && err.message ? err.message : err),
     });
   }
