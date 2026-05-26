@@ -187,8 +187,13 @@ app.post("/api/hotels", async (req, res) => {
 /**
  * POST /api/optimize
  * body: { city, nights, hotel, places[], activities[], restaurants[],
- *         arrivalTime?, departureTime?, customEvents?: [{day,time,title,area,note}] }
+ *         arrivalTime?, departureTime?,
+ *         arrivalIsInternational?: bool, departureIsInternational?: bool,
+ *         customEvents?: [{day,time,title,area,note}] }
  * -> { days: OptimizedDay[] }
+ *
+ * v21 #110: international flag drives the airport-arrival buffer
+ * (3 h international / 2 h domestic) inside the prompt.
  */
 app.post("/api/optimize", async (req, res) => {
   const destination = req.body || {};
